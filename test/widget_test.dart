@@ -10,7 +10,7 @@ void main() {
     );
 
     expect(find.text('Banco Inteligente Javeriana'), findsOneWidget);
-    expect(find.text('Pagar con QR'), findsOneWidget);
+    expect(find.text('ABRIR CÁMARA'), findsOneWidget);
     expect(find.text('INICIAR SESIÓN'), findsOneWidget);
   });
 }

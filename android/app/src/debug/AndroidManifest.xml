@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug builds only: lets the app call the recommendation API running
+         on the development machine over plain HTTP (http://10.0.2.2:8000).
+         Release builds keep Android's default and require HTTPS. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

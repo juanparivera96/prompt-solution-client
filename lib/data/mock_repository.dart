@@ -1,3 +1,4 @@
+import '../models/demo_profile.dart';
 import '../models/merchant.dart';
 import '../models/payment_product.dart';
 import '../models/user_stats.dart';
@@ -52,6 +53,18 @@ class MockRepository {
           ],
         ),
         PaymentProduct(
+          id: 'p4',
+          name: 'Tarjeta Débito',
+          brand: 'Tarjeta Débito',
+          type: ProductType.debitCard,
+          maskedNumber: '**** 5530',
+          defaultReward: RewardRule(
+            category: MerchantCategory.other,
+            type: RewardType.none,
+            rate: 0,
+          ),
+        ),
+        PaymentProduct(
           id: 'p3',
           name: 'Cuenta Corriente',
           brand: 'Cuenta Corriente',
@@ -64,6 +77,32 @@ class MockRepository {
           ),
         ),
       ];
+
+  /// Buyers the recommendation API knows (same ids as its catalog). The
+  /// balance and credit usage are what make the model answer differently.
+  List<DemoProfile> demoProfiles() => const [
+        DemoProfile(
+          id: 'USR-1385',
+          name: 'Saldo holgado',
+          description: r'Saldo de $900.000 · cupo de crédito usado al 88 %',
+        ),
+        DemoProfile(
+          id: 'USR-1483',
+          name: 'Saldo ajustado',
+          description: r'Saldo de $150.000 · cupo de crédito usado al 15 %',
+        ),
+        DemoProfile(
+          id: 'USR-1372',
+          name: 'Busca cashback',
+          description: r'Saldo de $400.000 · muy sensible al cashback',
+        ),
+      ];
+
+  /// The profile with [id], or the first one when [id] is null or unknown.
+  DemoProfile profileById(String? id) {
+    final profiles = demoProfiles();
+    return profiles.firstWhere((p) => p.id == id, orElse: () => profiles.first);
+  }
 
   UserStats userStats() => const UserStats(
         totalBenefits: 1240500,

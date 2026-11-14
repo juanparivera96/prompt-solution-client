@@ -14,6 +14,12 @@ class CardOptionTile extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
 
+  /// Optional secondary line, e.g. the probability estimated by the model.
+  final String? detail;
+
+  /// When set, the tile is dimmed, can't be tapped and shows this reason.
+  final String? unavailableReason;
+
   const CardOptionTile({
     super.key,
     required this.product,
@@ -21,6 +27,8 @@ class CardOptionTile extends StatelessWidget {
     this.recommended = false,
     this.selected = false,
     this.onTap,
+    this.detail,
+    this.unavailableReason,
   });
 
   @override
@@ -29,67 +37,103 @@ class CardOptionTile extends StatelessWidget {
         ? AppColors.lightAccent
         : (recommended ? AppColors.lightAccent : AppColors.lightOutline);
 
-    return Material(
-      color: AppColors.lightSurface,
-      borderRadius: BorderRadius.circular(4),
-      child: InkWell(
+    final unavailable = unavailableReason != null;
+
+    return Opacity(
+      opacity: unavailable ? 0.55 : 1,
+      child: Material(
+        color: AppColors.lightSurface,
         borderRadius: BorderRadius.circular(4),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: borderColor,
-              width: (recommended || selected) ? 1.5 : 1,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: unavailable ? null : onTap,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: borderColor,
+                width: (recommended || selected) ? 1.5 : 1,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _iconFor(product.type),
-                    color: AppColors.lightPrimary,
-                    size: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      _iconFor(product.type),
+                      color: AppColors.lightPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: AppColors.lightPrimaryText,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            '${product.typeLabel} · ${product.maskedNumber}',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.lightSecondaryText,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (recommended) const _RecommendedBadge(),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  rewardLabel,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: recommended
+                        ? AppColors.lightAccent
+                        : AppColors.lightSecondaryText,
+                    fontWeight: recommended ? FontWeight.w600 : FontWeight.w400,
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: AppTextStyles.titleMedium.copyWith(
-                            color: AppColors.lightPrimaryText,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          '${product.typeLabel} · ${product.maskedNumber}',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.lightSecondaryText,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
+                ),
+                if (detail != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    detail!,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.lightSecondaryText,
                     ),
                   ),
-                  if (recommended) const _RecommendedBadge(),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                rewardLabel,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: recommended
-                      ? AppColors.lightAccent
-                      : AppColors.lightSecondaryText,
-                  fontWeight: recommended ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ],
+                if (unavailable) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.block_rounded,
+                        size: 14,
+                        color: AppColors.lightError,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          unavailableReason!,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.lightError,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

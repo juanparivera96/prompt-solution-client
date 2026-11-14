@@ -46,6 +46,11 @@ class ConfirmationScreen extends StatelessWidget {
   double get _cashback =>
       selection.rewardType == RewardType.cashback ? selection.benefitValue : 0;
 
+  /// The user is free to pay with a product other than the suggested one.
+  bool get _followedSuggestion =>
+      recommendation.hasSuggestion &&
+      selection.product.id == recommendation.best.product.id;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +70,7 @@ class ConfirmationScreen extends StatelessWidget {
                   _OptimizationCard(
                     recommendation: recommendation,
                     selection: selection,
+                    followedSuggestion: _followedSuggestion,
                     pointsEarned: _pointsEarned,
                     cashback: _cashback,
                   ),
@@ -231,12 +237,14 @@ class _AmountCard extends StatelessWidget {
 class _OptimizationCard extends StatelessWidget {
   final PaymentRecommendation recommendation;
   final ScoredProduct selection;
+  final bool followedSuggestion;
   final int pointsEarned;
   final double cashback;
 
   const _OptimizationCard({
     required this.recommendation,
     required this.selection,
+    required this.followedSuggestion,
     required this.pointsEarned,
     required this.cashback,
   });
@@ -262,35 +270,38 @@ class _OptimizationCard extends StatelessWidget {
                   color: AppColors.lightPrimary,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.lightSuccess,
-                  borderRadius: BorderRadius.circular(9999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.trending_up,
-                        color: Colors.white, size: 12),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      '+${Formatters.cop.format(recommendation.deltaVsBaseline)}',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: Colors.white,
+              if (followedSuggestion && recommendation.deltaVsBaseline > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightSuccess,
+                    borderRadius: BorderRadius.circular(9999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.trending_up,
+                          color: Colors.white, size: 12),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        '+${Formatters.cop.format(recommendation.deltaVsBaseline)}',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            recommendation.reason,
+            followedSuggestion
+                ? recommendation.reason
+                : 'Pagaste con un medio distinto al sugerido.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.lightPrimary,
             ),

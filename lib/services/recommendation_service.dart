@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../core/formatters.dart';
 import '../models/merchant.dart';
 import '../models/payment_product.dart';
 import '../models/payment_recommendation.dart';
@@ -18,11 +19,7 @@ class RecommendationService {
   static const double _pointValue = 0.01;
   static const double _mileValue = 0.015;
 
-  static final NumberFormat _cop = NumberFormat.currency(
-    locale: 'es_CO',
-    symbol: r'$',
-    decimalDigits: 0,
-  );
+  static final NumberFormat _cop = Formatters.cop;
 
   const RecommendationService();
 
@@ -115,6 +112,10 @@ class RecommendationService {
         return 'viajes';
       case MerchantCategory.fuel:
         return 'combustible';
+      case MerchantCategory.clothing:
+        return 'tiendas de ropa';
+      case MerchantCategory.pharmacy:
+        return 'farmacias';
       case MerchantCategory.online:
         return 'compras online';
       case MerchantCategory.other:

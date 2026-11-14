@@ -5,6 +5,8 @@ enum MerchantCategory {
   grocery,
   travel,
   fuel,
+  clothing,
+  pharmacy,
   online,
   other,
 }

@@ -47,6 +47,12 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Plain HTTP only for hosts on the local network (the recommendation API in development). -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Se requiere acceso a la cámara para escanear códigos QR de comercios y ofrecerte la mejor opción de pago.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
