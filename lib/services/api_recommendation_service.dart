@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../core/config/api_config.dart';
 import '../core/formatters.dart';
 import '../models/ai_recommendation.dart';
+import '../models/customer_context.dart';
 import '../models/merchant.dart';
 import '../models/payment_product.dart';
 import '../models/payment_recommendation.dart';
@@ -16,10 +17,13 @@ import 'recommendation_service.dart';
 /// which payment method to suggest, and turns the answer into a ranked
 /// product list.
 ///
-/// The API picks the *method* (credit, debit or transfer); the product
-/// inside that method is picked with the local reward rules. If the API
-/// fails, takes too long or doesn't cover the purchase, the result is the
-/// plain rule-based ranking, so the payment flow never depends on the network.
+/// The app tells the API what the customer has (balance, credit usage and
+/// payment methods, taken from their products) and the API picks the
+/// *method* (credit, debit or transfer) among the ones they can pay with.
+/// The product inside that method is picked with the local reward rules.
+/// If the API fails, takes too long or doesn't cover the purchase, the
+/// result is the plain rule-based ranking, so the payment flow never
+/// depends on the network.
 class ApiRecommendationService {
   ApiRecommendationService({
     http.Client? client,
@@ -62,10 +66,15 @@ class ApiRecommendationService {
     void Function()? onWaking,
   }) async {
     final byRules = rules.rank(merchant: merchant, products: products);
+    final purchase = _body(
+      merchant,
+      profileId,
+      CustomerContext.fromProducts(products),
+    );
 
     final AiRecommendation ai;
     try {
-      ai = await _fetchAwake(merchant, profileId, onWaking);
+      ai = await _fetchAwake(purchase, onWaking);
     } catch (_) {
       return byRules.withNotice(
         'No hubo respuesta del modelo de IA. Se usaron las reglas de beneficios.',
@@ -86,17 +95,30 @@ class ApiRecommendationService {
 
   void close() => _client.close();
 
+  /// The request sent to the API: the purchase, and the customer's balance,
+  /// credit usage and payment methods ([customer]). The API takes the rest
+  /// of what the model needs (the customer's behaviour) from [profileId].
+  String _body(Merchant merchant, String profileId, CustomerContext customer) {
+    return jsonEncode({
+      'user_id': profileId,
+      'merchant_id': merchant.id,
+      'categoria': merchant.category.name,
+      'monto': merchant.amount,
+      'canal': 'QR_DYNAMIC',
+      'cliente': customer.toJson(),
+    });
+  }
+
   /// Asks the API. If it gives no answer, waits for it to wake up and asks
   /// once more with a longer deadline.
   Future<AiRecommendation> _fetchAwake(
-    Merchant merchant,
-    String profileId,
+    String purchase,
     void Function()? onWaking,
   ) async {
     // A wake-up already under way: the short attempt would only add delay.
     if (!status.isWaking) {
       try {
-        final ai = await _fetch(merchant, profileId, timeout);
+        final ai = await _fetch(purchase, timeout);
         status.markReady();
         return ai;
       } on _Rejected {
@@ -110,27 +132,17 @@ class ApiRecommendationService {
     if (!await status.check()) {
       throw http.ClientException('La API de recomendación no responde');
     }
-    final ai = await _fetch(merchant, profileId, retryTimeout);
+    final ai = await _fetch(purchase, retryTimeout);
     status.markReady();
     return ai;
   }
 
-  Future<AiRecommendation> _fetch(
-    Merchant merchant,
-    String profileId,
-    Duration deadline,
-  ) async {
+  Future<AiRecommendation> _fetch(String purchase, Duration deadline) async {
     final response = await _client
         .post(
           Uri.parse('$_baseUrl/v1/recomendacion'),
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'user_id': profileId,
-            'merchant_id': merchant.id,
-            'categoria': merchant.category.name,
-            'monto': merchant.amount,
-            'canal': 'QR_DYNAMIC',
-          }),
+          body: purchase,
         )
         .timeout(deadline);
     if (response.statusCode >= 400 && response.statusCode < 500) {
@@ -206,6 +218,8 @@ class ApiRecommendationService {
     switch (code) {
       case null:
         return null;
+      case 'sin_producto':
+        return 'No tienes este medio de pago';
       case 'saldo_insuficiente':
         return 'Saldo insuficiente para esta compra';
       case 'cupo_agotado':

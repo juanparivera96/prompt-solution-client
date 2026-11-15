@@ -86,7 +86,7 @@ class _PaymentRecommendationScreenState
     _requestedAt = DateTime.now();
     final recommendation = await _service.recommend(
       merchant: _merchant,
-      products: _repo.userProducts(),
+      products: _profile.products,
       profileId: _profile.id,
       onWaking: () {
         if (mounted && request == _request) setState(() => _waking = true);
@@ -110,7 +110,7 @@ class _PaymentRecommendationScreenState
     _request++; // The answer of the request in progress will be dropped.
     _show(
       _service.rules
-          .rank(merchant: _merchant, products: _repo.userProducts())
+          .rank(merchant: _merchant, products: _profile.products)
           .withNotice(
             'No esperaste a que la IA despertara. '
             'Se usaron las reglas de beneficios.',

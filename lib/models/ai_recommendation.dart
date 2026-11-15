@@ -64,8 +64,16 @@ class AiRecommendation {
   /// One-sentence explanation, ready to show to the user.
   final String reason;
 
-  /// Balance the API decided with, in COP.
+  /// The customer data the API decided with: balance in COP, share of the
+  /// credit limit in use (0-1) and the payment methods they own. Null when
+  /// the API doesn't report them.
   final double? balanceCop;
+  final double? creditUsage;
+  final Set<PaymentMethod>? ownedMethods;
+
+  /// True when that data is the one the app sent; false when the API took
+  /// it from its own catalog. Null when the API doesn't say.
+  final bool? usedAppData;
 
   /// When the API scored the purchase, in Bogotá time: hour (0-23), day of
   /// the week (0 = Monday) and whether it is a payroll day.
@@ -90,6 +98,9 @@ class AiRecommendation {
     this.habit,
     this.incentiveMethod,
     this.balanceCop,
+    this.creditUsage,
+    this.ownedMethods,
+    this.usedAppData,
     this.hour,
     this.weekday,
     this.payrollDay,
@@ -100,6 +111,8 @@ class AiRecommendation {
   factory AiRecommendation.fromJson(Map<String, dynamic> json) {
     final context = json['contexto'] as Map<String, dynamic>? ?? const {};
     final incentive = (context['incentivo_cop'] as num?)?.toDouble() ?? 0;
+    final owned = context['medios'];
+    final source = context['fuente_perfil'];
     return AiRecommendation(
       available: json['disponible'] as bool? ?? false,
       recommended: PaymentMethod.fromApi(json['recomendacion'] as String?),
@@ -115,6 +128,14 @@ class AiRecommendation {
       benefitCop: (json['beneficio_cop'] as num?)?.toDouble() ?? 0,
       reason: json['motivo'] as String? ?? '',
       balanceCop: (context['saldo_cop'] as num?)?.toDouble(),
+      creditUsage: (context['uso_cupo'] as num?)?.toDouble(),
+      ownedMethods: owned is List
+          ? {
+              for (final code in owned)
+                ?PaymentMethod.fromApi(code is String ? code : null),
+            }
+          : null,
+      usedAppData: source is String ? source == 'peticion' : null,
       hour: (context['hora'] as num?)?.toInt(),
       weekday: (context['dia_semana'] as num?)?.toInt(),
       payrollDay: context['dia_quincena'] as bool?,

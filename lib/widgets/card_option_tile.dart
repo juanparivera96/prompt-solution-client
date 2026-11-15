@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/formatters.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_text_styles.dart';
@@ -38,6 +39,7 @@ class CardOptionTile extends StatelessWidget {
         : (recommended ? AppColors.lightAccent : AppColors.lightOutline);
 
     final unavailable = unavailableReason != null;
+    final funds = _funds;
 
     return Opacity(
       opacity: unavailable ? 0.55 : 1,
@@ -85,6 +87,15 @@ class CardOptionTile extends StatelessWidget {
                               letterSpacing: 1,
                             ),
                           ),
+                          if (funds != null) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              funds,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.lightSecondaryText,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -138,6 +149,21 @@ class CardOptionTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// The money the customer can pay with from this product: the account
+  /// balance, or the credit still available. Null when the product has no
+  /// such data.
+  String? get _funds {
+    final balance = product.balanceCop;
+    if (balance != null) {
+      return 'Saldo disponible: ${Formatters.cop.format(balance)}';
+    }
+    final credit = product.creditAvailableCop;
+    if (credit != null) {
+      return 'Cupo disponible: ${Formatters.cop.format(credit)}';
+    }
+    return null;
   }
 
   IconData _iconFor(ProductType type) {

@@ -35,6 +35,14 @@ class PaymentProduct {
   /// Category-specific rules (higher rate takes precedence).
   final List<RewardRule> categoryRules;
 
+  /// Money in the account, in COP: set for accounts and for the debit card
+  /// that draws from one. Null for credit cards.
+  final double? balanceCop;
+
+  /// Credit limit and the part of it already used, in COP. Credit cards only.
+  final double? creditLimitCop;
+  final double? creditUsedCop;
+
   const PaymentProduct({
     required this.id,
     required this.name,
@@ -43,7 +51,17 @@ class PaymentProduct {
     required this.brand,
     required this.defaultReward,
     this.categoryRules = const [],
+    this.balanceCop,
+    this.creditLimitCop,
+    this.creditUsedCop,
   });
+
+  /// Credit still available on a card, in COP. Null when it isn't one.
+  double? get creditAvailableCop {
+    final limit = creditLimitCop;
+    final used = creditUsedCop;
+    return limit == null || used == null ? null : limit - used;
+  }
 
   /// Returns the best rule for [category], falling back to [defaultReward].
   RewardRule ruleFor(MerchantCategory category) {

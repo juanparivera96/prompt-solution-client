@@ -42,6 +42,9 @@ const _insufficientBalance = {
     'incentivo_cop': 25000.0,
     'incentivo_aplica_a': 'DIRECT_ACCOUNT_TRANSFER',
     'saldo_cop': 150000,
+    'uso_cupo': 0.15,
+    'medios': ['CREDIT_CARD_BANK', 'DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+    'fuente_perfil': 'peticion',
     'hora': 15,
     'dia_semana': 5,
     'dia_quincena': true,
@@ -127,6 +130,11 @@ void main() {
     expect(find.text('MEJOR OPCIÓN'), findsOneWidget);
     expect(find.text('Probabilidad de pagar con crédito: 52 %'), findsNWidgets(2));
     expect(find.text('Saldo insuficiente para esta compra'), findsNWidgets(2));
+    // Each product shows the money the customer can pay with: the balance
+    // the app sent to the API explains why debit and transfer are blocked.
+    expect(find.text('Saldo disponible: \$150.000'), findsNWidgets(2));
+    expect(find.text('Cupo disponible: \$6.800.000'), findsOneWidget);
+    expect(find.text('Cupo disponible: \$3.400.000'), findsOneWidget);
     expect(find.textContaining('Despertando la IA'), findsNothing);
     expect(find.text('REINTENTAR CON IA'), findsNothing);
     expect(_canConfirm(tester), isTrue);
@@ -208,7 +216,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('DESCARTADO'), findsNWidgets(2));
+    expect(find.text('Enviados por la app'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('VOLVER AL PAGO'));
     await tester.tap(find.text('VOLVER AL PAGO'));
     await tester.pumpAndSettle();
     expect(find.text('CONFIRMAR PAGO'), findsOneWidget);

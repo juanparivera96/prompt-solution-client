@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/formatters.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -108,6 +109,19 @@ class _SimulateScanSheetState extends State<SimulateScanSheet> {
     setState(() => _profile = profile);
   }
 
+  /// The customer's money in one line, taken from their products: the same
+  /// numbers the app sends to the API.
+  String _summary(DemoProfile profile) {
+    final customer = profile.context;
+    return [
+      'Saldo de ${Formatters.cop.format(customer.balanceCop)}',
+      customer.hasCredit
+          ? 'cupo de crédito usado al ${Formatters.percent(customer.creditUsage)}'
+          : 'sin tarjeta de crédito',
+      if (profile.trait != null) profile.trait!,
+    ].join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -189,7 +203,7 @@ class _SimulateScanSheetState extends State<SimulateScanSheet> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            _profile.description,
+            _summary(_profile),
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.lightSecondaryText,
             ),

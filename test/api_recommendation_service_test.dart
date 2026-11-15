@@ -99,19 +99,25 @@ ApiRecommendationService _service(
   );
 }
 
+/// The customer with the three payment methods, and the one without a
+/// credit card.
+const _withCredit = 'USR-1483';
+const _withoutCredit = 'USR-1167';
+
 Future<PaymentRecommendation> _recommend(
   ApiRecommendationService service, {
   void Function()? onWaking,
+  String profileId = _withCredit,
 }) =>
     service.recommend(
       merchant: _cafe,
-      products: _repo.userProducts(),
-      profileId: 'USR-1483',
+      products: _repo.userProducts(profileId),
+      profileId: profileId,
       onWaking: onWaking,
     );
 
 void main() {
-  test('sends the purchase to the API', () async {
+  test('sends the purchase and the customer data to the API', () async {
     late http.Request sent;
     final service = _service((request) async {
       sent = request;
@@ -128,6 +134,69 @@ void main() {
       'categoria': 'restaurant',
       'monto': 48000,
       'canal': 'QR_DYNAMIC',
+      // Taken from the customer's products: nobody types it.
+      'cliente': {
+        'saldo_cop': 150000,
+        'uso_cupo': 0.15,
+        'medios': [
+          'CREDIT_CARD_BANK',
+          'DEBIT_CARD',
+          'DIRECT_ACCOUNT_TRANSFER',
+        ],
+      },
+    });
+  });
+
+  group('a customer without a credit card', () {
+    const noCredit = {'CREDIT_CARD_BANK': 'sin_producto'};
+
+    test('is reported to the API with the credit limit fully used', () async {
+      late http.Request sent;
+      final service = _service((request) async {
+        sent = request;
+        return _json(_apiAnswer(excluded: noCredit));
+      });
+
+      await _recommend(service, profileId: _withoutCredit);
+
+      expect(jsonDecode(sent.body)['cliente'], {
+        'saldo_cop': 600000,
+        'uso_cupo': 1,
+        'medios': ['DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+      });
+    });
+
+    test('only gets products of the methods they own', () async {
+      final result = await _recommend(
+        _service((_) async => _json(_apiAnswer(excluded: noCredit))),
+        profileId: _withoutCredit,
+      );
+
+      expect(result.source, RecommendationSource.ai);
+      expect(result.best.product.type, ProductType.currentAccount);
+      expect(
+        result.ranked.map((s) => s.product.type),
+        [ProductType.currentAccount, ProductType.debitCard],
+      );
+      expect(result.ranked.every((s) => s.isAvailable), isTrue);
+    });
+
+    test('falls back to the rules if an older API suggests credit', () async {
+      // An API that ignores the customer data may suggest a method the
+      // customer doesn't own.
+      final result = await _recommend(
+        _service(
+          (_) async => _json(_apiAnswer(recommended: 'CREDIT_CARD_BANK')),
+        ),
+        profileId: _withoutCredit,
+      );
+
+      expect(result.source, RecommendationSource.rules);
+      expect(result.notice, contains('No tienes un producto'));
+      expect(
+        result.ranked.any((s) => s.product.type == ProductType.creditCard),
+        isFalse,
+      );
     });
   });
 

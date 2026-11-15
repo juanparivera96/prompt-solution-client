@@ -8,93 +8,51 @@ import '../models/user_stats.dart';
 class MockRepository {
   const MockRepository();
 
-  List<PaymentProduct> userProducts() => const [
-        PaymentProduct(
-          id: 'p1',
-          name: 'Visa Infinite',
-          brand: 'Visa Infinite',
-          type: ProductType.creditCard,
-          maskedNumber: '**** 8821',
-          defaultReward: RewardRule(
-            category: MerchantCategory.other,
-            type: RewardType.points,
-            rate: 1.0,
-          ),
-          categoryRules: [
-            RewardRule(
-              category: MerchantCategory.restaurant,
-              type: RewardType.points,
-              rate: 3.0,
-            ),
-            RewardRule(
-              category: MerchantCategory.travel,
-              type: RewardType.miles,
-              rate: 2.0,
-            ),
-          ],
-        ),
-        PaymentProduct(
-          id: 'p2',
-          name: 'Mastercard Black',
-          brand: 'Mastercard Black',
-          type: ProductType.creditCard,
-          maskedNumber: '**** 4410',
-          defaultReward: RewardRule(
-            category: MerchantCategory.other,
-            type: RewardType.cashback,
-            rate: 0.02,
-          ),
-          categoryRules: [
-            RewardRule(
-              category: MerchantCategory.grocery,
-              type: RewardType.cashback,
-              rate: 0.04,
-            ),
-          ],
-        ),
-        PaymentProduct(
-          id: 'p4',
-          name: 'Tarjeta Débito',
-          brand: 'Tarjeta Débito',
-          type: ProductType.debitCard,
-          maskedNumber: '**** 5530',
-          defaultReward: RewardRule(
-            category: MerchantCategory.other,
-            type: RewardType.none,
-            rate: 0,
-          ),
-        ),
-        PaymentProduct(
-          id: 'p3',
-          name: 'Cuenta Corriente',
-          brand: 'Cuenta Corriente',
-          type: ProductType.currentAccount,
-          maskedNumber: '**** 1002',
-          defaultReward: RewardRule(
-            category: MerchantCategory.other,
-            type: RewardType.none,
-            rate: 0,
-          ),
-        ),
-      ];
+  /// Products of the customer [profileId] (the first customer when it is
+  /// null or unknown), with the money in each.
+  ///
+  /// Plays the part of the bank's core system: the app gets them when the
+  /// session starts, so nobody has to type a balance.
+  List<PaymentProduct> userProducts([String? profileId]) =>
+      profileById(profileId).products;
 
-  /// Buyers the recommendation API knows (same ids as its catalog). The
-  /// balance and credit usage are what make the model answer differently.
-  List<DemoProfile> demoProfiles() => const [
+  /// The bank's customers in the demo. Their ids are the ones the
+  /// recommendation API knows (`GET /v1/meta`), and the balance and credit
+  /// usage of each are the ones in its catalog, so the model decides with
+  /// the same numbers whether they come from the app or from the API.
+  List<DemoProfile> demoProfiles() => [
         DemoProfile(
           id: 'USR-1385',
           name: 'Saldo holgado',
-          description: r'Saldo de $900.000 · cupo de crédito usado al 88 %',
+          products: _products(
+            balance: 900000,
+            visaUsed: 7040000,
+            mastercardUsed: 3520000,
+          ),
         ),
         DemoProfile(
           id: 'USR-1483',
           name: 'Saldo ajustado',
-          description: r'Saldo de $150.000 · cupo de crédito usado al 15 %',
+          products: _products(
+            balance: 150000,
+            visaUsed: 1200000,
+            mastercardUsed: 600000,
+          ),
         ),
         DemoProfile(
           id: 'USR-1372',
           name: 'Busca cashback',
-          description: r'Saldo de $400.000 · muy sensible al cashback',
+          trait: 'muy sensible al cashback',
+          products: _products(
+            balance: 400000,
+            visaUsed: 5920000,
+            mastercardUsed: 2960000,
+          ),
+        ),
+        DemoProfile(
+          id: 'USR-1167',
+          name: 'Sin tarjeta de crédito',
+          products: _products(balance: 600000),
         ),
       ];
 
@@ -142,4 +100,96 @@ class MockRepository {
       orElse: () => MerchantCategory.other,
     );
   }
+}
+
+const double _visaLimit = 8000000;
+const double _mastercardLimit = 4000000;
+
+/// The bank's product line with one customer's money in it.
+///
+/// [balance] is the account balance; the debit card draws from that account.
+/// [visaUsed] and [mastercardUsed] are what the customer owes on each credit
+/// card: a customer without them has no credit cards.
+List<PaymentProduct> _products({
+  required double balance,
+  double? visaUsed,
+  double? mastercardUsed,
+}) {
+  return [
+    if (visaUsed != null)
+      PaymentProduct(
+        id: 'p1',
+        name: 'Visa Infinite',
+        brand: 'Visa Infinite',
+        type: ProductType.creditCard,
+        maskedNumber: '**** 8821',
+        creditLimitCop: _visaLimit,
+        creditUsedCop: visaUsed,
+        defaultReward: const RewardRule(
+          category: MerchantCategory.other,
+          type: RewardType.points,
+          rate: 1.0,
+        ),
+        categoryRules: const [
+          RewardRule(
+            category: MerchantCategory.restaurant,
+            type: RewardType.points,
+            rate: 3.0,
+          ),
+          RewardRule(
+            category: MerchantCategory.travel,
+            type: RewardType.miles,
+            rate: 2.0,
+          ),
+        ],
+      ),
+    if (mastercardUsed != null)
+      PaymentProduct(
+        id: 'p2',
+        name: 'Mastercard Black',
+        brand: 'Mastercard Black',
+        type: ProductType.creditCard,
+        maskedNumber: '**** 4410',
+        creditLimitCop: _mastercardLimit,
+        creditUsedCop: mastercardUsed,
+        defaultReward: const RewardRule(
+          category: MerchantCategory.other,
+          type: RewardType.cashback,
+          rate: 0.02,
+        ),
+        categoryRules: const [
+          RewardRule(
+            category: MerchantCategory.grocery,
+            type: RewardType.cashback,
+            rate: 0.04,
+          ),
+        ],
+      ),
+    PaymentProduct(
+      id: 'p4',
+      name: 'Tarjeta Débito',
+      brand: 'Tarjeta Débito',
+      type: ProductType.debitCard,
+      maskedNumber: '**** 5530',
+      balanceCop: balance,
+      defaultReward: const RewardRule(
+        category: MerchantCategory.other,
+        type: RewardType.none,
+        rate: 0,
+      ),
+    ),
+    PaymentProduct(
+      id: 'p3',
+      name: 'Cuenta Corriente',
+      brand: 'Cuenta Corriente',
+      type: ProductType.currentAccount,
+      maskedNumber: '**** 1002',
+      balanceCop: balance,
+      defaultReward: const RewardRule(
+        category: MerchantCategory.other,
+        type: RewardType.none,
+        rate: 0,
+      ),
+    ),
+  ];
 }

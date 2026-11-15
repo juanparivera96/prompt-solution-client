@@ -55,6 +55,9 @@ const _incentiveWins = {
     'incentivo_cop': 14500.0,
     'incentivo_aplica_a': 'DIRECT_ACCOUNT_TRANSFER',
     'saldo_cop': 150000,
+    'uso_cupo': 0.15,
+    'medios': ['CREDIT_CARD_BANK', 'DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+    'fuente_perfil': 'peticion',
     'hora': 15,
     'dia_semana': 5,
     'dia_quincena': true,
@@ -94,6 +97,9 @@ const _balanceTooLow = {
     'incentivo_cop': 25000.0,
     'incentivo_aplica_a': 'DIRECT_ACCOUNT_TRANSFER',
     'saldo_cop': 150000,
+    'uso_cupo': 0.15,
+    'medios': ['CREDIT_CARD_BANK', 'DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+    'fuente_perfil': 'peticion',
     'hora': 15,
     'dia_semana': 5,
     'dia_quincena': true,
@@ -101,6 +107,54 @@ const _balanceTooLow = {
   'modelo_version': 'xgb-v10-b2afda2f',
   'latencia_ms': 8.21,
 };
+
+/// Supermercado Central for the customer without a credit card (USR-1167,
+/// Saturday 14-Nov-2026, 8 p.m.): the model sees credit as the most probable
+/// method, but the customer doesn't own one.
+const _noCreditCard = {
+  'disponible': true,
+  'recomendacion': 'DIRECT_ACCOUNT_TRANSFER',
+  'habito': 'DIRECT_ACCOUNT_TRANSFER',
+  'sugerencia_activa': false,
+  'propensiones': {
+    'CREDIT_CARD_BANK': 0.5107,
+    'DEBIT_CARD': 0.0976,
+    'DIRECT_ACCOUNT_TRANSFER': 0.3917,
+  },
+  'utilidades': {
+    'CREDIT_CARD_BANK': 0.2554,
+    'DEBIT_CARD': 0.0488,
+    'DIRECT_ACCOUNT_TRANSFER': 0.7292,
+  },
+  'factibles': ['DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+  'excluidos': {'CREDIT_CARD_BANK': 'sin_producto'},
+  'beneficio_cop': 16000.0,
+  'motivo': 'Te sugerimos transferencia: es tu medio más probable (39 %) y '
+      'además ahorras \$16.000 por el incentivo del comercio.',
+  'perfil': 'USR-1167',
+  'contexto': {
+    'monto': 320000.0,
+    'incentivo_cop': 16000.0,
+    'incentivo_aplica_a': 'DIRECT_ACCOUNT_TRANSFER',
+    'saldo_cop': 600000.0,
+    'uso_cupo': 1.0,
+    'medios': ['DEBIT_CARD', 'DIRECT_ACCOUNT_TRANSFER'],
+    'fuente_perfil': 'peticion',
+    'hora': 20,
+    'dia_semana': 5,
+    'dia_quincena': true,
+  },
+  'modelo_version': 'xgb-v10-b2afda2f',
+  'latencia_ms': 6.54,
+};
+
+const _supermercado = Merchant(
+  id: 'TXN-55110-A',
+  name: 'Supermercado Central',
+  location: 'Medellín, COL',
+  category: MerchantCategory.grocery,
+  amount: 320000,
+);
 
 const _meta = {
   'modelo_version': 'xgb-v10-b2afda2f',
@@ -184,6 +238,9 @@ void main() {
     expect(find.text('\$145.200'), findsOneWidget);
     expect(find.text('\$150.000'), findsOneWidget);
     expect(find.text('\$14.500 por transferencia'), findsOneWidget);
+    // The customer data the API decided with, and where it came from.
+    expect(find.text('crédito, débito y transferencia'), findsOneWidget);
+    expect(find.text('Enviados por la app'), findsOneWidget);
     expect(find.text('sábado, 15 h · quincena'), findsOneWidget);
     expect(find.text('xgb-v10-b2afda2f'), findsOneWidget);
     expect(find.text('29 ms'), findsOneWidget);
@@ -232,6 +289,61 @@ void main() {
       find.textContaining('La utilidad combina la probabilidad con el incentivo'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('explains a method the customer does not own', (tester) async {
+    await _pumpScreen(tester, merchant: _supermercado, answer: _noCreditCard);
+
+    expect(
+      find.text(
+        'Transferencia: probabilidad 39 % + incentivo \$16.000 '
+        '→ utilidad 0,73, frente a 0,05 de débito.',
+      ),
+      findsOneWidget,
+    );
+    // Credit is the model's most probable method, but it isn't offered.
+    expect(find.text('51 %'), findsOneWidget);
+    expect(find.text('DESCARTADO'), findsOneWidget);
+    expect(
+      find.text('No tienes este medio de pago. No entra en la comparación.'),
+      findsOneWidget,
+    );
+    // "Most probable" is said of a method the customer owns.
+    expect(_top(tester, 'MÁS PROBABLE'), lessThan(_top(tester, 'Débito')));
+
+    expect(find.text('\$600.000'), findsOneWidget);
+    expect(find.text('Sin tarjeta de crédito'), findsOneWidget);
+    expect(find.text('débito y transferencia'), findsOneWidget);
+    expect(find.text('Enviados por la app'), findsOneWidget);
+  });
+
+  testWidgets('says when the customer data came from the API catalog',
+      (tester) async {
+    final answer = {
+      ..._incentiveWins,
+      'contexto': {
+        ...(_incentiveWins['contexto']! as Map<String, Object>),
+        'fuente_perfil': 'catalogo',
+      },
+    };
+    await _pumpScreen(tester, merchant: _elPortal, answer: answer);
+
+    expect(find.text('Catálogo de la API'), findsOneWidget);
+    expect(find.text('Enviados por la app'), findsNothing);
+  });
+
+  testWidgets('an older API that reports no customer data shows none',
+      (tester) async {
+    final answer = {
+      ..._incentiveWins,
+      'contexto': {'incentivo_cop': 14500.0, 'saldo_cop': 150000},
+    };
+    await _pumpScreen(tester, merchant: _elPortal, answer: answer);
+
+    expect(find.text('\$150.000'), findsOneWidget);
+    expect(find.text('MEDIOS DEL CLIENTE'), findsNothing);
+    expect(find.text('DATOS DEL CLIENTE'), findsNothing);
+    expect(find.text('CUPO DE CRÉDITO USADO'), findsNothing);
   });
 
   test('no suggestion, no headline', () {

@@ -9,6 +9,7 @@ import '../../data/mock_repository.dart';
 import '../../models/merchant.dart';
 import '../../models/user_stats.dart';
 import '../../services/recommendation_service.dart';
+import '../../services/session_manager.dart';
 import '../../widgets/card_option_tile.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/secure_footer.dart';
@@ -24,7 +25,8 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = _repo.userStats();
-    final products = _repo.userProducts();
+    final products =
+        _repo.userProducts(SessionManager.instance.demoProfileId);
 
     // Use the "restaurant" scenario as default context so the UI can show
     // category-aware reward hints on each card.

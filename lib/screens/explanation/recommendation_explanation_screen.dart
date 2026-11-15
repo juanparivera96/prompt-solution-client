@@ -480,8 +480,9 @@ class _Steps extends StatelessWidget {
           _Step(
             number: '3',
             title: 'Factibilidad',
-            body: 'Se descartan los medios con los que no puedes pagar: débito '
-                'y transferencia si el saldo no cubre la compra, y crédito si '
+            body: 'Se descartan los medios que no tienes y aquellos con los '
+                'que no puedes pagar: débito y transferencia si el saldo no '
+                'cubre la compra, y crédito si '
                 '${maxUsage == null ? 'el cupo está casi lleno' : 'el cupo usado llega al ${Formatters.percent(maxUsage)}'}. '
                 'Se sugiere el de mayor utilidad entre los que quedan.',
           ),
@@ -585,9 +586,33 @@ class _Facts extends StatelessWidget {
     return '${_weekdays[weekday]}, $hour h$payroll';
   }
 
+  /// "crédito, débito y transferencia". Null when the API didn't say.
+  String? get _ownedMethods {
+    final owned = ai.ownedMethods;
+    if (owned == null || owned.isEmpty) return null;
+    final names = [
+      for (final method in PaymentMethod.values)
+        if (owned.contains(method)) method.label,
+    ];
+    if (names.length == 1) return names.single;
+    return '${names.sublist(0, names.length - 1).join(', ')} y ${names.last}';
+  }
+
+  /// "15 %", or that there is no credit card. Null when the API didn't say.
+  String? get _creditUsage {
+    final usage = ai.creditUsage;
+    if (ai.ownedMethods?.contains(PaymentMethod.credit) == false) {
+      return 'Sin tarjeta de crédito';
+    }
+    return usage == null ? null : Formatters.percent(usage);
+  }
+
   @override
   Widget build(BuildContext context) {
     final balance = ai.balanceCop;
+    final creditUsage = _creditUsage;
+    final ownedMethods = _ownedMethods;
+    final usedAppData = ai.usedAppData;
     final moment = _moment;
     final latency = ai.latencyMs;
     final incentiveMethod = ai.incentiveMethod;
@@ -605,6 +630,17 @@ class _Facts extends StatelessWidget {
             LabeledDataRow(
               label: 'SALDO DISPONIBLE',
               value: Formatters.cop.format(balance),
+            ),
+          if (creditUsage != null)
+            LabeledDataRow(label: 'CUPO DE CRÉDITO USADO', value: creditUsage),
+          if (ownedMethods != null)
+            LabeledDataRow(label: 'MEDIOS DEL CLIENTE', value: ownedMethods),
+          if (usedAppData != null)
+            LabeledDataRow(
+              label: 'DATOS DEL CLIENTE',
+              value: usedAppData
+                  ? 'Enviados por la app'
+                  : 'Catálogo de la API',
             ),
           LabeledDataRow(
             label: 'INCENTIVO',
