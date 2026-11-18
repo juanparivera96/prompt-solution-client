@@ -11,6 +11,7 @@ import '../models/merchant.dart';
 import '../models/payment_product.dart';
 import '../models/payment_recommendation.dart';
 import 'api_status.dart';
+import 'http_client.dart';
 import 'recommendation_service.dart';
 
 /// Asks the recommendation API (XGBoost propensities + utility function)
@@ -32,7 +33,7 @@ class ApiRecommendationService {
     this.retryTimeout = ApiConfig.retryTimeout,
     this.rules = const RecommendationService(),
     ApiStatus? status,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client ?? createHttpClient(),
         _baseUrl = baseUrl ?? ApiConfig.baseUrl,
         // A service pointed somewhere else (tests) gets its own status, so
         // it never reads or changes the state of the app's API.

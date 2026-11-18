@@ -47,29 +47,41 @@ Todos los números salen de la respuesta de la API. La fórmula y sus pesos se l
 
 ## Correr la demo
 
-1. Levantar la API (desde la raíz de `prompt-solution-client-g6`):
-
-```bash
-python -m uvicorn app.main:app --app-dir api --host 127.0.0.1 --port 8000
-```
-
-2. Correr la app en el emulador de Android:
+La app usa por defecto la API desplegada en Render (`https://prompt-solution-client-api.onrender.com`), así que no hay que levantar nada en el computador ni pasar opciones:
 
 ```bash
 flutter run
 ```
 
-En el emulador la app llama a `http://10.0.2.2:8000`, que es el computador donde corre la API. En web y escritorio usa `http://localhost:8000`.
-
-Para usar la API desplegada en la nube (Render, plan gratuito) en lugar de la local:
+Lo mismo vale para el APK que se instala en un celular físico:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=https://prompt-solution-client-api.onrender.com
+flutter build apk --release
 ```
 
-Así la app funciona sin levantar nada en el computador, también en un celular físico con datos o Wi-Fi. El plan gratuito apaga la API tras 15 minutos sin uso y tarda unos 40 segundos en volver (medición del 14-nov-2026). La app la despierta al abrirse y al abrir **Simular QR (demo)**, donde un aviso muestra «Despertando la IA…» con los segundos que lleva y cambia a «IA lista» cuando responde. Antes de presentar, abrir el simulador y esperar «IA lista».
+El archivo queda en `build/app/outputs/flutter-apk/app-release.apk`.
 
-Con un celular físico y la API en el computador, levantar la API con `--host 0.0.0.0` y usar la IP del computador, por ejemplo `--dart-define=API_BASE_URL=http://192.168.1.20:8000`. El tráfico HTTP sin cifrar solo está permitido en compilaciones de depuración.
+El plan gratuito de Render apaga la API tras 15 minutos sin uso y tarda unos 40 segundos en volver (medición del 14-nov-2026). La app la despierta al abrirse y al abrir **Simular QR (demo)**, donde un aviso muestra «Despertando la IA…» con los segundos que lleva y cambia a «IA lista» cuando responde. Antes de presentar, abrir el simulador y esperar «IA lista».
+
+Los avisos muestran el servidor al que llama la app (por ejemplo «Servidor: prompt-solution-client-api.onrender.com»). En el celular y en escritorio, si la dirección no existe o no hay red, la app lo dice en unos 10 segundos («La IA no responde») en vez de esperar como si la API estuviera dormida.
+
+### Con la API en el computador
+
+Para probar cambios de la API sin desplegarlos, levantarla desde la raíz de `prompt-solution-client-g6`:
+
+```bash
+python -m uvicorn app.main:app --app-dir api --host 0.0.0.0 --port 8000
+```
+
+Y pasarle a la app la dirección según dónde corre:
+
+| Dónde corre la app | Opción |
+|---|---|
+| Emulador de Android | `--dart-define=API_BASE_URL=http://10.0.2.2:8000` |
+| Web o escritorio | `--dart-define=API_BASE_URL=http://localhost:8000` |
+| Celular físico en la misma Wi-Fi | `--dart-define=API_BASE_URL=http://<IP del computador>:8000` |
+
+`10.0.2.2` solo existe dentro del emulador: un APK compilado con esa dirección no funciona en un celular. El tráfico HTTP sin cifrar solo está permitido en compilaciones de depuración.
 
 ## Recorrido sugerido
 

@@ -199,7 +199,11 @@ class _PaymentRecommendationScreenState
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (recommendation == null && _waking)
-                    _WakingBanner(since: _requestedAt, onSkip: _useRulesNow)
+                    _WakingBanner(
+                      since: _requestedAt,
+                      server: _service.status.server,
+                      onSkip: _useRulesNow,
+                    )
                   else if (recommendation == null)
                     const _LoadingBanner()
                   else ...[
@@ -360,8 +364,15 @@ class _LoadingBanner extends StatelessWidget {
 /// has taken, and lets the user pay with the rules instead of waiting.
 class _WakingBanner extends StatelessWidget {
   final DateTime since;
+
+  /// The server the app is waiting for, so a wrong address is visible.
+  final String server;
   final VoidCallback onSkip;
-  const _WakingBanner({required this.since, required this.onSkip});
+  const _WakingBanner({
+    required this.since,
+    required this.server,
+    required this.onSkip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -402,6 +413,13 @@ class _WakingBanner extends StatelessWidget {
             'tardar hasta un minuto en volver. Cuando responda verás la '
             'recomendación de la IA.',
             style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.lightSecondaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Servidor: $server',
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.lightSecondaryText,
             ),
           ),

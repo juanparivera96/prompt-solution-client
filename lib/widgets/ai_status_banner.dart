@@ -55,15 +55,17 @@ class AiStatusBanner extends StatelessWidget {
     return ListenableBuilder(
       listenable: status,
       builder: (context, _) {
+        final server = 'Servidor: ${status.server}';
         final since = status.checkingSince;
         if (since != null) {
           return ElapsedBuilder(
             since: since,
             builder: (_, seconds) => seconds < ApiStatus.slowAfter.inSeconds
-                ? const _Banner(
+                ? _Banner(
                     color: AppColors.lightAccent,
                     busy: true,
                     title: 'Conectando con la IA…',
+                    footnote: server,
                   )
                 : _Banner(
                     color: AppColors.lightAccent,
@@ -71,16 +73,18 @@ class AiStatusBanner extends StatelessWidget {
                     title: 'Despertando la IA… $seconds s',
                     detail: 'El servidor gratuito se apaga cuando no se usa. '
                         'Puede tardar hasta un minuto.',
+                    footnote: server,
                   ),
           );
         }
         switch (status.state) {
           case ApiState.ready:
-            return const _Banner(
+            return _Banner(
               color: AppColors.lightSuccess,
               icon: Icons.check_circle_rounded,
               title: 'IA lista',
               detail: 'La recomendación saldrá del modelo.',
+              footnote: server,
             );
           case ApiState.unreachable:
             return _Banner(
@@ -88,6 +92,7 @@ class AiStatusBanner extends StatelessWidget {
               icon: Icons.cloud_off_rounded,
               title: 'La IA no responde',
               detail: 'La recomendación saldrá por reglas de beneficios.',
+              footnote: server,
               actionLabel: 'REINTENTAR',
               onAction: status.check,
             );
@@ -97,6 +102,7 @@ class AiStatusBanner extends StatelessWidget {
               color: AppColors.lightSecondaryText,
               icon: Icons.help_outline_rounded,
               title: 'IA sin comprobar',
+              footnote: server,
               actionLabel: 'COMPROBAR',
               onAction: status.check,
             );
@@ -110,6 +116,9 @@ class _Banner extends StatelessWidget {
   final Color color;
   final String title;
   final String? detail;
+
+  /// Small print under the detail, e.g. the server the app talks to.
+  final String? footnote;
   final IconData? icon;
 
   /// Shows a spinner instead of [icon].
@@ -121,6 +130,7 @@ class _Banner extends StatelessWidget {
     required this.color,
     required this.title,
     this.detail,
+    this.footnote,
     this.icon,
     this.busy = false,
     this.actionLabel,
@@ -165,6 +175,15 @@ class _Banner extends StatelessWidget {
                   Text(
                     detail!,
                     style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.lightSecondaryText,
+                    ),
+                  ),
+                ],
+                if (footnote != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    footnote!,
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.lightSecondaryText,
                     ),
                   ),

@@ -98,6 +98,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('La IA no responde'), findsOneWidget);
+    // The address is on screen, so a build pointing elsewhere is obvious.
+    expect(find.text('Servidor: api.test'), findsOneWidget);
     expect(
       find.text('La recomendación saldrá por reglas de beneficios.'),
       findsOneWidget,

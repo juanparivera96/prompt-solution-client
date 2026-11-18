@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../core/config/api_config.dart';
 import '../models/capa2_params.dart';
+import 'http_client.dart';
 
 enum ApiState {
   /// Not checked yet.
@@ -29,7 +30,7 @@ class ApiStatus extends ChangeNotifier {
     String? baseUrl,
     this.wakeTimeout = ApiConfig.wakeTimeout,
     DateTime Function()? clock,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client ?? createHttpClient(),
         _baseUrl = baseUrl ?? ApiConfig.baseUrl,
         _now = clock ?? DateTime.now;
 
@@ -55,6 +56,9 @@ class ApiStatus extends ChangeNotifier {
   Future<bool>? _inFlight;
 
   ApiState get state => _state;
+
+  /// The server the app talks to, e.g. "prompt-solution-client-api.onrender.com".
+  String get server => serverName(_baseUrl);
 
   /// When the check in progress started. Null unless [state] is checking.
   DateTime? get checkingSince =>

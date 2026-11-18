@@ -161,6 +161,7 @@ void main() {
     // No silent switch to the rules while the API wakes up.
     expect(find.textContaining('Despertando la IA…'), findsOneWidget);
     expect(find.text('NO ESPERAR: USAR REGLAS'), findsOneWidget);
+    expect(find.text('Servidor: api.test'), findsOneWidget);
     expect(find.text('RECOMENDACIÓN POR REGLAS'), findsNothing);
     expect(_canConfirm(tester), isFalse);
 
