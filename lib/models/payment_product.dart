@@ -27,7 +27,7 @@ class PaymentProduct {
   final String name;
   final ProductType type;
   final String maskedNumber; // "**** 8821"
-  final String brand; // Visa Infinite, Mastercard Black, etc.
+  final String brand; // Tarjeta Crédito, Tarjeta Débito, Saldo disponible
 
   /// Default reward when no category-specific rule matches.
   final RewardRule defaultReward;
@@ -78,7 +78,7 @@ class PaymentProduct {
       case ProductType.debitCard:
         return 'DÉBITO';
       case ProductType.currentAccount:
-        return 'CUENTA';
+        return 'TRANSFERENCIA';
     }
   }
 }

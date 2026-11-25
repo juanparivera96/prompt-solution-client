@@ -29,22 +29,14 @@ class MockRepository {
           name: 'Saldo holgado',
           username: 'holgado',
           password: demoPassword,
-          products: _products(
-            balance: 900000,
-            visaUsed: 7040000,
-            mastercardUsed: 3520000,
-          ),
+          products: _products(balance: 900000, creditUsed: 10560000),
         ),
         DemoProfile(
           id: 'USR-1483',
           name: 'Saldo ajustado',
           username: 'ajustado',
           password: demoPassword,
-          products: _products(
-            balance: 150000,
-            visaUsed: 1200000,
-            mastercardUsed: 600000,
-          ),
+          products: _products(balance: 150000, creditUsed: 1800000),
         ),
         DemoProfile(
           id: 'USR-1372',
@@ -52,11 +44,7 @@ class MockRepository {
           username: 'cashback',
           password: demoPassword,
           trait: 'muy sensible al cashback',
-          products: _products(
-            balance: 400000,
-            visaUsed: 5920000,
-            mastercardUsed: 2960000,
-          ),
+          products: _products(balance: 400000, creditUsed: 8880000),
         ),
         DemoProfile(
           id: 'USR-1167',
@@ -125,29 +113,28 @@ class MockRepository {
   }
 }
 
-const double _visaLimit = 8000000;
-const double _mastercardLimit = 4000000;
+const double _creditLimit = 12000000;
 
-/// The bank's product line with one customer's money in it.
+/// The bank's product line with one customer's money in it: one product per
+/// payment method the model knows (credit, debit and transfer).
 ///
-/// [balance] is the account balance; the debit card draws from that account.
-/// [visaUsed] and [mastercardUsed] are what the customer owes on each credit
-/// card: a customer without them has no credit cards.
+/// [balance] is the account balance: the debit card and the transfer both
+/// draw from that account. [creditUsed] is what the customer owes on the
+/// credit card; a customer without it has no credit card.
 List<PaymentProduct> _products({
   required double balance,
-  double? visaUsed,
-  double? mastercardUsed,
+  double? creditUsed,
 }) {
   return [
-    if (visaUsed != null)
+    if (creditUsed != null)
       PaymentProduct(
         id: 'p1',
-        name: 'Visa Infinite',
-        brand: 'Visa Infinite',
+        name: 'Tarjeta Crédito',
+        brand: 'Tarjeta Crédito',
         type: ProductType.creditCard,
         maskedNumber: '**** 8821',
-        creditLimitCop: _visaLimit,
-        creditUsedCop: visaUsed,
+        creditLimitCop: _creditLimit,
+        creditUsedCop: creditUsed,
         defaultReward: const RewardRule(
           category: MerchantCategory.other,
           type: RewardType.points,
@@ -160,31 +147,14 @@ List<PaymentProduct> _products({
             rate: 3.0,
           ),
           RewardRule(
-            category: MerchantCategory.travel,
-            type: RewardType.miles,
-            rate: 2.0,
-          ),
-        ],
-      ),
-    if (mastercardUsed != null)
-      PaymentProduct(
-        id: 'p2',
-        name: 'Mastercard Black',
-        brand: 'Mastercard Black',
-        type: ProductType.creditCard,
-        maskedNumber: '**** 4410',
-        creditLimitCop: _mastercardLimit,
-        creditUsedCop: mastercardUsed,
-        defaultReward: const RewardRule(
-          category: MerchantCategory.other,
-          type: RewardType.cashback,
-          rate: 0.02,
-        ),
-        categoryRules: const [
-          RewardRule(
             category: MerchantCategory.grocery,
             type: RewardType.cashback,
             rate: 0.04,
+          ),
+          RewardRule(
+            category: MerchantCategory.travel,
+            type: RewardType.miles,
+            rate: 2.0,
           ),
         ],
       ),
@@ -201,10 +171,11 @@ List<PaymentProduct> _products({
         rate: 0,
       ),
     ),
+    // Pays by direct transfer from the account (DIRECT_ACCOUNT_TRANSFER).
     PaymentProduct(
       id: 'p3',
-      name: 'Cuenta Corriente',
-      brand: 'Cuenta Corriente',
+      name: 'Saldo disponible',
+      brand: 'Saldo disponible',
       type: ProductType.currentAccount,
       maskedNumber: '**** 1002',
       balanceCop: balance,

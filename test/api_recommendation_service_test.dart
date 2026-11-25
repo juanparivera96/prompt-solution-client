@@ -219,13 +219,41 @@ void main() {
     expect(result.ranked.every((s) => s.isAvailable), isTrue);
   });
 
-  test('inside the recommended method the best reward wins', () async {
-    final answer = _apiAnswer(recommended: 'CREDIT_CARD_BANK');
-    final result = await _recommend(_service((_) async => _json(answer)));
+  test('each demo customer has one product per payment method', () {
+    for (final profile in _repo.demoProfiles()) {
+      final types = profile.products.map((p) => p.type).toList();
+      expect(types.toSet().length, types.length, reason: profile.name);
+    }
+    expect(
+      _repo.userProducts(_withCredit).map((p) => p.name),
+      ['Tarjeta Crédito', 'Tarjeta Débito', 'Saldo disponible'],
+    );
+  });
 
-    // Visa Infinite gives 3x points at restaurants; Mastercard Black 2 %.
-    expect(result.best.product.name, 'Visa Infinite');
-    expect(result.ranked[1].product.type, ProductType.creditCard);
+  test('inside the recommended method the best reward wins', () async {
+    // A customer with a second credit card that pays less at restaurants.
+    const plainCard = PaymentProduct(
+      id: 'extra',
+      name: 'Tarjeta Clásica',
+      brand: 'Tarjeta Clásica',
+      type: ProductType.creditCard,
+      maskedNumber: '**** 0001',
+      defaultReward: RewardRule(
+        category: MerchantCategory.other,
+        type: RewardType.cashback,
+        rate: 0.01,
+      ),
+    );
+    final answer = _apiAnswer(recommended: 'CREDIT_CARD_BANK');
+    final result = await _service((_) async => _json(answer)).recommend(
+      merchant: _cafe,
+      products: [..._repo.userProducts(_withCredit), plainCard],
+      profileId: _withCredit,
+    );
+
+    // Tarjeta Crédito gives 3x points at restaurants; the other one 1 %.
+    expect(result.best.product.name, 'Tarjeta Crédito');
+    expect(result.ranked[1].product.name, 'Tarjeta Clásica');
   });
 
   test('methods the user cannot pay with are flagged and ranked last',
@@ -245,7 +273,11 @@ void main() {
       unavailable.map((s) => s.product.type),
       unorderedEquals([ProductType.debitCard, ProductType.currentAccount]),
     );
-    expect(result.ranked.sublist(2), unavailable);
+    // The blocked ones go last.
+    expect(
+      result.ranked.sublist(result.ranked.length - unavailable.length),
+      unavailable,
+    );
     expect(unavailable.first.unavailableReason, contains('Saldo insuficiente'));
   });
 
@@ -384,7 +416,7 @@ void main() {
       expect(result.source, RecommendationSource.rules);
       expect(result.notice, isNotNull);
       expect(result.ai, isNull);
-      expect(result.best.product.name, 'Visa Infinite');
+      expect(result.best.product.name, 'Tarjeta Crédito');
       expect(result.ranked.every((s) => s.probability == null), isTrue);
     }
 

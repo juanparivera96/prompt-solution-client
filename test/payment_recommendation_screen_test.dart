@@ -133,15 +133,17 @@ void main() {
     // Layer-1 propensity, in the customer's terms.
     expect(
       find.text('Históricamente usas crédito en el 52 % de compras como esta'),
-      findsNWidgets(2),
+      findsOneWidget,
     );
     expect(find.textContaining('Probabilidad de pagar'), findsNothing);
     expect(find.text('Saldo insuficiente para esta compra'), findsNWidgets(2));
     // Each product shows the money the customer can pay with: the balance
     // the app sent to the API explains why debit and transfer are blocked.
-    expect(find.text('Saldo disponible: \$150.000'), findsNWidgets(2));
-    expect(find.text('Cupo disponible: \$6.800.000'), findsOneWidget);
-    expect(find.text('Cupo disponible: \$3.400.000'), findsOneWidget);
+    expect(find.text('Saldo en la cuenta: \$150.000'), findsNWidgets(2));
+    expect(find.text('Cupo disponible: \$10.200.000'), findsOneWidget);
+    expect(find.text('Tarjeta Crédito'), findsOneWidget);
+    expect(find.text('Saldo disponible'), findsOneWidget);
+    expect(find.text('TRANSFERENCIA · **** 1002'), findsOneWidget);
     expect(find.textContaining('Despertando la IA'), findsNothing);
     expect(find.text('REINTENTAR CON IA'), findsNothing);
     expect(_canConfirm(tester), isTrue);

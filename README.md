@@ -25,7 +25,7 @@ El login es simulado, con cuatro clientes de demo. Quien inicia sesión es el cl
 | Saldo holgado | `holgado` | `demo2026` | Saldo de $900.000 · cupo de crédito usado al 88 % |
 | Saldo ajustado | `ajustado` | `demo2026` | Saldo de $150.000 · cupo de crédito usado al 15 % |
 | Busca cashback | `cashback` | `demo2026` | Saldo de $400.000 · cupo usado al 74 % · muy sensible al cashback |
-| Sin tarjeta de crédito | `sincredito` | `demo2026` | Saldo de $600.000 · solo débito y cuenta |
+| Sin tarjeta de crédito | `sincredito` | `demo2026` | Saldo de $600.000 · solo débito y transferencia |
 
 - El usuario no distingue mayúsculas ni espacios; la contraseña sí.
 - **Usuarios de demostración**, en el login y en la hoja que aparece tras escanear, lista estos clientes y llena el formulario con un toque.
@@ -39,14 +39,22 @@ Los usuarios y la contraseña están en `lib/data/mock_repository.dart` y la ses
 
 ## Datos del cliente
 
-En un banco real, la app conoce los productos del cliente en cuanto inicia sesión. En este MVP ese papel lo hace `lib/data/mock_repository.dart`, un banco simulado con los cuatro clientes de demo. Cada producto lleva su dinero: saldo en la cuenta y en la tarjeta débito, cupo total y usado en las tarjetas de crédito.
+En un banco real, la app conoce los productos del cliente en cuanto inicia sesión. En este MVP ese papel lo hace `lib/data/mock_repository.dart`, un banco simulado con los cuatro clientes de demo. Cada cliente tiene un producto por cada medio de pago que conoce el modelo, y cada producto lleva su dinero:
+
+| Producto en la app | Medio del modelo | Dinero que muestra |
+|---|---|---|
+| Tarjeta Crédito | `CREDIT_CARD_BANK` | Cupo disponible (cupo total menos lo usado) |
+| Tarjeta Débito | `DEBIT_CARD` | Saldo en la cuenta |
+| Saldo disponible | `DIRECT_ACCOUNT_TRANSFER` | Saldo en la cuenta, el mismo de la tarjeta débito |
+
+El cliente «Sin tarjeta de crédito» no tiene el primero. La tarjeta débito y la transferencia gastan de la misma cuenta, por eso muestran el mismo saldo: el modelo también usa un solo saldo para los dos medios. Se diferencian en cómo se paga (tarjeta en el datáfono o transferencia directa) y en que los incentivos de los comercios solo aplican a la transferencia.
 
 Con esos productos la app arma el bloque `cliente` de cada petición (`lib/models/customer_context.dart`):
 
 | Campo | Cómo se calcula |
 |---|---|
 | `saldo_cop` | El saldo de la cuenta. La tarjeta débito gasta de esa misma cuenta. |
-| `uso_cupo` | Lo que debe en todas sus tarjetas de crédito dividido por el cupo total. Si no tiene tarjeta de crédito se envía 1. |
+| `uso_cupo` | Lo que debe en la tarjeta de crédito dividido por su cupo. Si no tiene tarjeta de crédito se envía 1. |
 | `medios` | Los medios para los que tiene un producto. |
 
 Lo que la app no conoce es el comportamiento del cliente (ticket medio y sensibilidad al cashback). Esas dos variables del modelo las guarda la API por `user_id`.
@@ -113,7 +121,7 @@ Iniciar sesión con el cliente de la tabla y, en la pantalla de la cámara, toca
 | Saldo ajustado | Restaurante El Portal | La IA sugiere transferencia por el incentivo de $14.500, aunque lo más probable era crédito |
 | Saldo holgado | Café La Candelaria | El incentivo de $4.800 no alcanza: se mantiene débito, el medio más probable |
 | Saldo ajustado | Moda Andina | El saldo no cubre la compra: sugiere crédito y bloquea débito y transferencia |
-| Sin tarjeta de crédito | Supermercado Central | El modelo le da a crédito entre 34 % y 55 % de probabilidad según la hora, pero el cliente no tiene tarjeta: la IA lo descarta, sugiere transferencia y la app solo ofrece débito y cuenta |
+| Sin tarjeta de crédito | Supermercado Central | El modelo le da a crédito entre 34 % y 55 % de probabilidad según la hora, pero el cliente no tiene tarjeta: la IA lo descarta, sugiere transferencia y la app solo ofrece débito y saldo disponible |
 | Cualquiera | Aerolínea Andes | Categoría fuera del modelo: la app usa las reglas de beneficios |
 
 La hora y el día de la compra son variables del modelo, así que un caso reñido puede cambiar según cuándo se pruebe. Estos cinco dan la misma recomendación a cualquier hora y día. Uno que sí cambia: «Saldo ajustado» en Café La Candelaria.

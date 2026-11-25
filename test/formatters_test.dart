@@ -20,8 +20,8 @@ void main() {
     );
 
     expect(result.reason, contains(r'Ganas $4.356 más que la peor opción'));
-    final mastercard =
-        result.ranked.firstWhere((s) => s.product.name == 'Mastercard Black');
-    expect(mastercard.rewardLabel, r'2% Cashback ($2.904)');
+    final card =
+        result.ranked.firstWhere((s) => s.product.name == 'Tarjeta Crédito');
+    expect(card.rewardLabel, 'Gana 3x Puntos (1307 pts)');
   });
 }

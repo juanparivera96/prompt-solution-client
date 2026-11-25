@@ -81,10 +81,15 @@ void main() {
     expect(find.text('Usuario: ajustado'), findsOneWidget);
     expect(find.text('\$150.000'), findsOneWidget);
     expect(find.text('15 %'), findsOneWidget);
-    expect(find.text('TUS PRODUCTOS (4)'), findsOneWidget);
-    expect(find.text('Visa Infinite'), findsOneWidget);
-    expect(find.text('Cupo disponible: \$6.800.000'), findsOneWidget);
-    expect(find.text('Saldo disponible: \$150.000'), findsNWidgets(2));
+    // One product per payment method the model knows.
+    expect(find.text('TUS PRODUCTOS (3)'), findsOneWidget);
+    expect(find.text('Tarjeta Crédito'), findsOneWidget);
+    expect(find.text('Tarjeta Débito'), findsOneWidget);
+    expect(find.text('Saldo disponible'), findsOneWidget);
+    expect(find.text('Visa Infinite'), findsNothing);
+    expect(find.text('Cupo disponible: \$10.200.000'), findsOneWidget);
+    // Debit and transfer draw from the same account.
+    expect(find.text('Saldo en la cuenta: \$150.000'), findsNWidgets(2));
   });
 
   testWidgets('the demo users list fills the form', (tester) async {
@@ -103,9 +108,8 @@ void main() {
     expect(SessionManager.instance.profile?.id, 'USR-1167');
     expect(find.text('TUS PRODUCTOS (2)'), findsOneWidget);
     expect(find.text('No tiene'), findsOneWidget);
-    expect(find.text('Visa Infinite'), findsNothing);
-    expect(find.text('Mastercard Black'), findsNothing);
-    expect(find.text('Saldo disponible: \$600.000'), findsNWidgets(2));
+    expect(find.text('Tarjeta Crédito'), findsNothing);
+    expect(find.text('Saldo en la cuenta: \$600.000'), findsNWidgets(2));
   });
 
   testWidgets('logging out goes back to the login', (tester) async {

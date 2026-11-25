@@ -157,7 +157,7 @@ class CardOptionTile extends StatelessWidget {
   String? get _funds {
     final balance = product.balanceCop;
     if (balance != null) {
-      return 'Saldo disponible: ${Formatters.cop.format(balance)}';
+      return 'Saldo en la cuenta: ${Formatters.cop.format(balance)}';
     }
     final credit = product.creditAvailableCop;
     if (credit != null) {
