@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/formatters.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../data/mock_repository.dart';
 import '../../../models/demo_profile.dart';
 import '../../../services/api_status.dart';
 import '../../../services/session_manager.dart';
@@ -73,9 +71,11 @@ const List<ScanScenario> kDemoScenarios = [
   ),
 ];
 
-/// Bottom sheet that lets the user pick a buyer profile and a preset QR
-/// payload. Returns the selected payload, or null if dismissed; the profile
-/// is stored in [SessionManager].
+/// Bottom sheet that lets the user pick a preset QR payload. Returns the
+/// selected payload, or null if dismissed.
+///
+/// The buyer is the customer logged in ([SessionManager]); when nobody is,
+/// the app asks for the login right after the merchant is picked.
 ///
 /// It also shows whether the recommendation API is awake, and wakes it up
 /// if needed, so the demo doesn't start while the AI can't answer.
@@ -90,36 +90,13 @@ class SimulateScanSheet extends StatefulWidget {
 }
 
 class _SimulateScanSheetState extends State<SimulateScanSheet> {
-  static const _repo = MockRepository();
-
   late final ApiStatus _status = widget.status ?? ApiStatus.instance;
-
-  late DemoProfile _profile =
-      _repo.profileById(SessionManager.instance.demoProfileId);
 
   @override
   void initState() {
     super.initState();
     // Joins the check already in progress, if any.
     if (!_status.isFresh) _status.check();
-  }
-
-  void _selectProfile(DemoProfile profile) {
-    SessionManager.instance.demoProfileId = profile.id;
-    setState(() => _profile = profile);
-  }
-
-  /// The customer's money in one line, taken from their products: the same
-  /// numbers the app sends to the API.
-  String _summary(DemoProfile profile) {
-    final customer = profile.context;
-    return [
-      'Saldo de ${Formatters.cop.format(customer.balanceCop)}',
-      customer.hasCredit
-          ? 'cupo de crédito usado al ${Formatters.percent(customer.creditUsage)}'
-          : 'sin tarjeta de crédito',
-      if (profile.trait != null) profile.trait!,
-    ].join(' · ');
   }
 
   @override
@@ -162,8 +139,8 @@ class _SimulateScanSheetState extends State<SimulateScanSheet> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Elige un comprador y un comercio para ver cómo cambia la '
-            'recomendación de pago.',
+            'Elige un comercio para ver la recomendación de pago del '
+            'cliente que inició sesión.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.lightSecondaryText,
             ),
@@ -172,42 +149,14 @@ class _SimulateScanSheetState extends State<SimulateScanSheet> {
           AiStatusBanner(status: _status),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            'PERFIL DEL COMPRADOR (DEMO)',
+            'CLIENTE',
             style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.lightSecondaryText,
               letterSpacing: 1,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: [
-              for (final p in _repo.demoProfiles())
-                ChoiceChip(
-                  label: Text(p.name),
-                  selected: p.id == _profile.id,
-                  onSelected: (_) => _selectProfile(p),
-                  showCheckmark: false,
-                  selectedColor: AppColors.lightAccent,
-                  backgroundColor: AppColors.lightSurface,
-                  side: const BorderSide(color: AppColors.lightOutline),
-                  labelStyle: AppTextStyles.bodySmall.copyWith(
-                    color: p.id == _profile.id
-                        ? Colors.white
-                        : AppColors.lightPrimaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            _summary(_profile),
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.lightSecondaryText,
-            ),
-          ),
+          _CustomerSummary(profile: SessionManager.instance.profile),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'COMERCIO',
@@ -289,6 +238,66 @@ class _ScenarioTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Who the recommendation is for: the customer logged in, or a note that
+/// the login comes after picking the merchant.
+class _CustomerSummary extends StatelessWidget {
+  final DemoProfile? profile;
+
+  const _CustomerSummary({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = this.profile;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        border: Border.all(color: AppColors.lightOutline),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            profile == null
+                ? Icons.lock_outline_rounded
+                : Icons.person_rounded,
+            color: AppColors.lightAccent,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: profile == null
+                ? Text(
+                    'Aún no has iniciado sesión. Al elegir el comercio te '
+                    'pediremos tu usuario y contraseña.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.lightSecondaryText,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.name,
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: AppColors.lightPrimaryText,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        profile.summary,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.lightSecondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }

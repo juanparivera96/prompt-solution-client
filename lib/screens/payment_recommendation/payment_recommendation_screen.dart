@@ -70,7 +70,9 @@ class _PaymentRecommendationScreenState
   void initState() {
     super.initState();
     _merchant = _repo.decodeQr(widget.qrPayload);
-    _profile = _repo.profileById(SessionManager.instance.demoProfileId);
+    // The QR flow asks for the login first; the fallback only keeps the
+    // screen usable if it is ever opened without a session.
+    _profile = SessionManager.instance.profile ?? _repo.profileById(null);
     _service = widget.service ?? ApiRecommendationService();
     _load();
   }
@@ -159,13 +161,15 @@ class _PaymentRecommendationScreenState
     Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
   }
 
-  /// "Probabilidad de pagar con débito: 49 %". Only for AI rankings.
+  /// "Históricamente usas débito en el 49 % de compras como esta": the
+  /// propensity of layer 1, said in the customer's terms. Only for AI
+  /// rankings; the "why" screen shows it as the model's probability.
   String? _probabilityLabel(ScoredProduct s) {
     final probability = s.probability;
     if (probability == null) return null;
     final method = PaymentMethod.ofProduct(s.product.type).label;
     final percent = (probability * 100).round();
-    return 'Probabilidad de pagar con $method: $percent %';
+    return 'Históricamente usas $method en el $percent % de compras como esta';
   }
 
   @override
@@ -303,7 +307,7 @@ class _TransactionCard extends StatelessWidget {
           LabeledDataRow(label: 'COMERCIO', value: merchant.name.toUpperCase()),
           LabeledDataRow(label: 'UBICACIÓN', value: merchant.location.toUpperCase()),
           LabeledDataRow(label: 'ID', value: merchant.id, monospaceValue: true),
-          LabeledDataRow(label: 'PERFIL DEMO', value: profile.name.toUpperCase()),
+          LabeledDataRow(label: 'CLIENTE', value: profile.name.toUpperCase()),
           Container(
             padding: const EdgeInsets.all(AppSpacing.xl),
             color: AppColors.lightAccent.withValues(alpha: 0.1),

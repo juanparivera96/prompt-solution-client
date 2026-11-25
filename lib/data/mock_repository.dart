@@ -16,6 +16,9 @@ class MockRepository {
   List<PaymentProduct> userProducts([String? profileId]) =>
       profileById(profileId).products;
 
+  /// Password of every demo customer. Synthetic data for the demo.
+  static const String demoPassword = 'demo2026';
+
   /// The bank's customers in the demo. Their ids are the ones the
   /// recommendation API knows (`GET /v1/meta`), and the balance and credit
   /// usage of each are the ones in its catalog, so the model decides with
@@ -24,6 +27,8 @@ class MockRepository {
         DemoProfile(
           id: 'USR-1385',
           name: 'Saldo holgado',
+          username: 'holgado',
+          password: demoPassword,
           products: _products(
             balance: 900000,
             visaUsed: 7040000,
@@ -33,6 +38,8 @@ class MockRepository {
         DemoProfile(
           id: 'USR-1483',
           name: 'Saldo ajustado',
+          username: 'ajustado',
+          password: demoPassword,
           products: _products(
             balance: 150000,
             visaUsed: 1200000,
@@ -42,6 +49,8 @@ class MockRepository {
         DemoProfile(
           id: 'USR-1372',
           name: 'Busca cashback',
+          username: 'cashback',
+          password: demoPassword,
           trait: 'muy sensible al cashback',
           products: _products(
             balance: 400000,
@@ -52,9 +61,23 @@ class MockRepository {
         DemoProfile(
           id: 'USR-1167',
           name: 'Sin tarjeta de crédito',
+          username: 'sincredito',
+          password: demoPassword,
           products: _products(balance: 600000),
         ),
       ];
+
+  /// The customer with these credentials, or null when they don't match.
+  /// The username ignores case and surrounding spaces; the password doesn't.
+  DemoProfile? authenticate(String username, String password) {
+    final user = username.trim().toLowerCase();
+    for (final profile in demoProfiles()) {
+      if (profile.username == user && profile.password == password) {
+        return profile;
+      }
+    }
+    return null;
+  }
 
   /// The profile with [id], or the first one when [id] is null or unknown.
   DemoProfile profileById(String? id) {

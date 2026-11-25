@@ -6,32 +6,43 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/mock_repository.dart';
+import '../../models/demo_profile.dart';
 import '../../models/merchant.dart';
+import '../../models/payment_product.dart';
 import '../../models/user_stats.dart';
 import '../../services/recommendation_service.dart';
 import '../../services/session_manager.dart';
 import '../../widgets/card_option_tile.dart';
+import '../../widgets/data_row.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/secure_footer.dart';
 
-/// User profile: benefits summary and connected financial products.
-/// Also exposes a floating QR shortcut to keep the flow one tap away.
+/// Profile of the customer logged in: their money, their products (with
+/// the balance or credit available in each) and a benefits summary. Also
+/// exposes a floating QR shortcut to keep the flow one tap away.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   static const _repo = MockRepository();
   static const _service = RecommendationService();
 
+  void _logout(BuildContext context) {
+    SessionManager.instance.logout();
+    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final profile = SessionManager.instance.profile;
+    if (profile == null) return _NoSession(onLogin: () => _logout(context));
+
     final stats = _repo.userStats();
-    final products =
-        _repo.userProducts(SessionManager.instance.demoProfileId);
 
     // Use the "restaurant" scenario as default context so the UI can show
     // category-aware reward hints on each card.
     final demoMerchant = _repo.decodeQr(null);
-    final ranked = _service.rank(merchant: demoMerchant, products: products);
+    final ranked =
+        _service.rank(merchant: demoMerchant, products: profile.products);
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
@@ -49,7 +60,7 @@ class ProfileScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const GradientHeader(
-            eyebrow: 'PAYMENT OPTIMIZER',
+            eyebrow: 'MI PERFIL',
             title: 'Banco Inteligente Javeriana',
             trailingIcon: Icons.auto_awesome_rounded,
           ),
@@ -59,10 +70,12 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _CustomerCard(profile: profile),
+                  const SizedBox(height: AppSpacing.xl),
                   _BenefitsCard(stats: stats),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
-                    'TUS PRODUCTOS',
+                    'TUS PRODUCTOS (${profile.products.length})',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.lightSecondaryText,
                       letterSpacing: 1,
@@ -80,7 +93,14 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xxxl),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: () => _logout(context),
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('CERRAR SESIÓN'),
+                  ),
+                  // Room for the floating button over the last item.
+                  const SizedBox(height: AppSpacing.xxxl * 2),
                 ],
               ),
             ),
@@ -97,6 +117,130 @@ class ProfileScreen extends StatelessWidget {
       return 'Gana 3x Puntos (Mejor para Restaurantes)';
     }
     return base;
+  }
+}
+
+/// Who is logged in and the money they have: balance and credit, the same
+/// numbers the app sends to the recommendation API.
+class _CustomerCard extends StatelessWidget {
+  final DemoProfile profile;
+  const _CustomerCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final customer = profile.context;
+    final cards =
+        profile.products.where((p) => p.type == ProductType.creditCard);
+    final creditAvailable =
+        cards.fold<double>(0, (sum, p) => sum + (p.creditAvailableCop ?? 0));
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        border: Border.all(color: AppColors.lightOutline),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.lightAccent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: AppColors.lightAccent,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.name,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.lightPrimaryText,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Usuario: ${profile.username}',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.lightSecondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          LabeledDataRow(
+            label: 'SALDO DISPONIBLE',
+            value: Formatters.cop.format(customer.balanceCop),
+          ),
+          if (customer.hasCredit) ...[
+            LabeledDataRow(
+              label: 'CUPO DISPONIBLE',
+              value: Formatters.cop.format(creditAvailable),
+            ),
+            LabeledDataRow(
+              label: 'CUPO DE CRÉDITO USADO',
+              value: Formatters.percent(customer.creditUsage),
+            ),
+          ] else
+            const LabeledDataRow(
+              label: 'TARJETA DE CRÉDITO',
+              value: 'No tiene',
+            ),
+          if (profile.trait != null)
+            LabeledDataRow(label: 'PERFIL', value: profile.trait!),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown if the profile is opened without a session.
+class _NoSession extends StatelessWidget {
+  final VoidCallback onLogin;
+  const _NoSession({required this.onLogin});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Inicia sesión para ver tu perfil.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.lightPrimaryText,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              FilledButton(
+                onPressed: onLogin,
+                child: const Text('INICIAR SESIÓN'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

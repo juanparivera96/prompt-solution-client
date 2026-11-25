@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:agent_payment_ai_recomendation/data/mock_repository.dart';
 import 'package:agent_payment_ai_recomendation/screens/payment_recommendation/payment_recommendation_screen.dart';
 import 'package:agent_payment_ai_recomendation/services/api_recommendation_service.dart';
 import 'package:agent_payment_ai_recomendation/services/session_manager.dart';
@@ -76,8 +77,9 @@ Future<void> _pumpScreen(WidgetTester tester, MockClientHandler handler) async {
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.reset);
 
-  SessionManager.instance.demoProfileId = 'USR-1483';
-  addTearDown(() => SessionManager.instance.demoProfileId = null);
+  // Logged in as the "Saldo ajustado" customer.
+  SessionManager.instance.login(const MockRepository().profileById('USR-1483'));
+  addTearDown(SessionManager.instance.reset);
 
   await tester.pumpWidget(MaterialApp(
     home: PaymentRecommendationScreen(
@@ -128,7 +130,12 @@ void main() {
     expect(find.text('SALDO AJUSTADO'), findsOneWidget);
     expect(find.textContaining('Tu saldo no cubre esta compra'), findsOneWidget);
     expect(find.text('MEJOR OPCIÓN'), findsOneWidget);
-    expect(find.text('Probabilidad de pagar con crédito: 52 %'), findsNWidgets(2));
+    // Layer-1 propensity, in the customer's terms.
+    expect(
+      find.text('Históricamente usas crédito en el 52 % de compras como esta'),
+      findsNWidgets(2),
+    );
+    expect(find.textContaining('Probabilidad de pagar'), findsNothing);
     expect(find.text('Saldo insuficiente para esta compra'), findsNWidgets(2));
     // Each product shows the money the customer can pay with: the balance
     // the app sent to the API explains why debit and transfer are blocked.
@@ -148,7 +155,7 @@ void main() {
     expect(find.textContaining('No hubo respuesta del modelo de IA'), findsOneWidget);
     expect(find.text('REINTENTAR CON IA'), findsOneWidget);
     expect(find.text('MEJOR OPCIÓN'), findsOneWidget);
-    expect(find.textContaining('Probabilidad de pagar'), findsNothing);
+    expect(find.textContaining('Históricamente usas'), findsNothing);
     expect(find.text('¿POR QUÉ ESTA SUGERENCIA?'), findsNothing);
   });
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:agent_payment_ai_recomendation/data/mock_repository.dart';
 import 'package:agent_payment_ai_recomendation/screens/qr_scanner/widgets/simulate_scan_sheet.dart';
 import 'package:agent_payment_ai_recomendation/services/api_status.dart';
 import 'package:agent_payment_ai_recomendation/services/session_manager.dart';
@@ -23,8 +24,7 @@ Future<void> _pumpSheet(WidgetTester tester, ApiStatus status) async {
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.reset);
 
-  SessionManager.instance.demoProfileId = null;
-  addTearDown(() => SessionManager.instance.demoProfileId = null);
+  addTearDown(SessionManager.instance.reset);
 
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(body: SimulateScanSheet(status: status)),
@@ -32,18 +32,13 @@ Future<void> _pumpSheet(WidgetTester tester, ApiStatus status) async {
 }
 
 void main() {
-  testWidgets('describes each customer with the money in their products',
-      (tester) async {
+  testWidgets('the buyer is the customer logged in', (tester) async {
+    SessionManager.instance
+        .login(const MockRepository().profileById('USR-1372'));
     await _pumpSheet(tester, _status((_) async => _awake()));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Saldo de \$900.000 · cupo de crédito usado al 88 %'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('Busca cashback'));
-    await tester.pump();
+    expect(find.text('Busca cashback'), findsOneWidget);
     expect(
       find.text(
         'Saldo de \$400.000 · cupo de crédito usado al 74 % '
@@ -51,14 +46,18 @@ void main() {
       ),
       findsOneWidget,
     );
+    // No profile to pick: it comes from the login.
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.text('Saldo ajustado'), findsNothing);
+  });
 
-    await tester.tap(find.text('Sin tarjeta de crédito'));
-    await tester.pump();
-    expect(
-      find.text('Saldo de \$600.000 · sin tarjeta de crédito'),
-      findsOneWidget,
-    );
-    expect(SessionManager.instance.demoProfileId, 'USR-1167');
+  testWidgets('without a session it says the login comes next',
+      (tester) async {
+    await _pumpSheet(tester, _status((_) async => _awake()));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Aún no has iniciado sesión'), findsOneWidget);
+    expect(find.text('Restaurante El Portal'), findsOneWidget);
   });
 
   testWidgets('wakes the AI up when it opens and confirms when it is ready',

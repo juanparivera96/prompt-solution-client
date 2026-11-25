@@ -4,12 +4,16 @@ import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../services/session_manager.dart';
+import '../../services/login_controller.dart';
+import '../../widgets/demo_users_button.dart';
 import '../../widgets/secure_footer.dart';
 
 /// Main login screen for Banco Inteligente Javeriana.
-/// Offers a prominent QR shortcut that bypasses full login and jumps
-/// straight to the camera (login is later required to see benefits).
+///
+/// The login is simulated with the demo customers (see
+/// `MockRepository.demoProfiles`): the one who logs in is the customer the
+/// app recommends for. Also offers a QR shortcut that jumps straight to the
+/// camera (login is then required before seeing the recommendation).
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -18,19 +22,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _userCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _login = LoginController();
 
   @override
   void dispose() {
-    _userCtrl.dispose();
-    _passCtrl.dispose();
+    _login.dispose();
     super.dispose();
   }
 
-  void _login() {
-    // MVP: no real auth. Any input opens the profile.
-    SessionManager.instance.login();
+  void _loginWithPassword() {
+    if (_login.loginWithPassword() != null) _openProfile();
+  }
+
+  void _loginWithBiometrics() {
+    if (_login.loginWithBiometrics() != null) _openProfile();
+  }
+
+  void _openProfile() {
     Navigator.of(context).pushReplacementNamed(AppRoutes.profile);
   }
 
@@ -62,7 +70,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
-                      controller: _userCtrl,
+                      controller: _login.username,
+                      onChanged: (_) => _login.edited(),
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
                       decoration: const InputDecoration(
                         labelText: 'Usuario',
                         hintText: 'Ingresa tu usuario',
@@ -71,7 +82,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     TextField(
-                      controller: _passCtrl,
+                      controller: _login.password,
+                      onChanged: (_) => _login.edited(),
+                      onSubmitted: (_) => _loginWithPassword(),
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: 'Contraseña',
@@ -79,25 +92,40 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icon(Icons.lock_outline_rounded),
                       ),
                     ),
+                    LoginError(controller: _login),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Wraps to two lines on narrow screens instead of
+                    // overflowing.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: AppSpacing.sm,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.fingerprint_rounded,
-                              size: 18,
-                              color: AppColors.lightSecondaryText,
+                        InkWell(
+                          onTap: _loginWithBiometrics,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.sm,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'Usar Biometría',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.lightSecondaryText,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.fingerprint_rounded,
+                                  size: 18,
+                                  color: AppColors.lightSecondaryText,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  'Usar Biometría',
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: AppColors.lightSecondaryText,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                         Text(
                           '¿Olvidaste tu contraseña?',
@@ -109,10 +137,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     FilledButton(
-                      onPressed: _login,
+                      onPressed: _loginWithPassword,
                       child: const Text('INICIAR SESIÓN'),
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
+                    const SizedBox(height: AppSpacing.sm),
+                    DemoUsersButton(onSelected: _login.fill),
+                    const SizedBox(height: AppSpacing.lg),
                     const Divider(),
                     const SizedBox(height: AppSpacing.md),
                     Text(

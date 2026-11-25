@@ -16,9 +16,30 @@ App ──► POST /v1/recomendacion ──► Capa 1 (XGBoost) ──► Capa 2
 
 El código de la integración está en `lib/services/api_recommendation_service.dart`, el estado de la API (dormida, despertando, lista) en `lib/services/api_status.dart` y la URL y los plazos en `lib/core/config/api_config.dart`.
 
+## Inicio de sesión
+
+El login es simulado, con cuatro clientes de demo. Quien inicia sesión es el cliente para el que la app recomienda: se cargan sus productos y su dinero, y no hay que elegir un perfil antes de pagar.
+
+| Cliente | Usuario | Contraseña | Qué lo distingue |
+|---|---|---|---|
+| Saldo holgado | `holgado` | `demo2026` | Saldo de $900.000 · cupo de crédito usado al 88 % |
+| Saldo ajustado | `ajustado` | `demo2026` | Saldo de $150.000 · cupo de crédito usado al 15 % |
+| Busca cashback | `cashback` | `demo2026` | Saldo de $400.000 · cupo usado al 74 % · muy sensible al cashback |
+| Sin tarjeta de crédito | `sincredito` | `demo2026` | Saldo de $600.000 · solo débito y cuenta |
+
+- El usuario no distingue mayúsculas ni espacios; la contraseña sí.
+- **Usuarios de demostración**, en el login y en la hoja que aparece tras escanear, lista estos clientes y llena el formulario con un toque.
+- **Usar biometría** vuelve a entrar con el último cliente que inició sesión mientras la app sigue abierta. Si nadie ha entrado aún, pide usar usuario y contraseña primero.
+- Se puede entrar desde la pantalla de login o escanear primero: si no hay sesión, la app la pide justo después del escaneo.
+- **Cerrar sesión**, en el perfil, permite cambiar de cliente.
+
+El perfil muestra al cliente que inició sesión, su saldo y su cupo, y sus productos con el saldo o el cupo disponible de cada uno.
+
+Los usuarios y la contraseña están en `lib/data/mock_repository.dart` y la sesión en `lib/services/session_manager.dart`. Son datos sintéticos: una app real no guardaría contraseñas en el código.
+
 ## Datos del cliente
 
-En un banco real, la app conoce los productos del cliente en cuanto inicia sesión. En este MVP ese papel lo hace `lib/data/mock_repository.dart`, un banco simulado con cuatro clientes de demo. Cada producto lleva su dinero: saldo en la cuenta y en la tarjeta débito, cupo total y usado en las tarjetas de crédito.
+En un banco real, la app conoce los productos del cliente en cuanto inicia sesión. En este MVP ese papel lo hace `lib/data/mock_repository.dart`, un banco simulado con los cuatro clientes de demo. Cada producto lleva su dinero: saldo en la cuenta y en la tarjeta débito, cupo total y usado en las tarjetas de crédito.
 
 Con esos productos la app arma el bloque `cliente` de cada petición (`lib/models/customer_context.dart`):
 
@@ -85,7 +106,7 @@ Y pasarle a la app la dirección según dónde corre:
 
 ## Recorrido sugerido
 
-En la pantalla de la cámara, **Simular QR (demo)** permite elegir un cliente y un comercio. En los cuatro primeros casos, **¿Por qué esta sugerencia?** muestra los números de la decisión:
+Iniciar sesión con el cliente de la tabla y, en la pantalla de la cámara, tocar **Simular QR (demo)** y elegir el comercio. Cada producto muestra cuánto usa el cliente ese medio («Históricamente usas crédito en el 66 % de compras como esta»), y en los cuatro primeros casos **¿Por qué esta sugerencia?** muestra los números de la decisión:
 
 | Cliente | Comercio | Qué muestra |
 |---|---|---|
